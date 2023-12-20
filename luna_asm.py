@@ -68,14 +68,17 @@ class InstructionParser(object):
         'bgt'   :   0b000011, 
         'bne'   :   0b000011, 
         'ble'   :   0b000011, 
-        'bge'   :   0b000011, 
+        'bge'   :   0b000011,
+        'ldro'  :   0b000100,
+        'lea'   :   0b000101,
         'ldr'   :   0b001010, 
         'ldrb'  :   0b001010, 
         'ldrh'  :   0b001010, 
         'ldrsb' :   0b001010, 
         'ldrsh' :   0b001010, 
         'ldm'   :   0b001010, 
-        'pop'   :   0b001010, 
+        'pop'   :   0b001010,
+        'stro'  :   0b000110,
         'str'   :   0b001011, 
         'strb'  :   0b001011, 
         'strh'  :   0b001011, 
@@ -98,10 +101,16 @@ class InstructionParser(object):
         'sub'   :   0b010001,
         'andl'  :   0b010010, 
         'andm'  :   0b010010, 
-        'and'   :   0b010010, 
+        'and'   :   0b010010,
+        'notl'  :   0b010010,
+        'notm'  :   0b010010,
+        'not'   :   0b010010,
         'orrl'  :   0b010011, 
         'orrm'  :   0b010011, 
-        'orr'   :   0b010011, 
+        'orr'   :   0b010011,
+        'xorl'  :   0b010011,
+        'xorm'  :   0b010011,
+        'xor'   :   0b010011,
         'asr'   :   0b010100, 
         'lsr'   :   0b010100, 
         'lsl'   :   0b010101, 
@@ -110,7 +119,13 @@ class InstructionParser(object):
         'movb'  :   0b011000, 
         'movh'  :   0b011000, 
         'movl'  :   0b011000, 
-        'move'  :   0b011001, 
+        'cmov'  :   0b011001,
+        'cmoveq':   0b011001,
+        'cmovgt':   0b011001,
+        'cmovlt':   0b011001,
+        'cmovne':   0b011001,
+        'cmovle':   0b011001,
+        'cmovge':   0b011001,
         }
 
     operand_wait = {
@@ -285,6 +300,52 @@ class InstructionParser(object):
 
         return imm
 
+    def parse_op_ldro(self, operand):
+        if len(operand) != 3:
+            raise ValueError('instruction operand length not equal to 3')
+
+        dst = operand[0]
+        src = operand[1]
+        imm = operand[2]
+
+        data = 0
+        data += (int(dst[1:]) << 20)
+        data += (int(src[1:]) << 15)
+
+        if '#' in imm:
+            self.imm_validate(int(imm[1:]), 15, self.IMM_SIGNED)
+            if '-' in imm:
+                data += (0x8000 - int(imm[2:]))
+            else:
+                data += int(imm[1:])
+        else:
+            raise ValueError('the immediate data format error')
+
+        return data
+
+    def parse_op_lea(self, operand):
+        if len(operand) != 3:
+            raise ValueError('instruction operand length not equal to 3')
+
+        dst = operand[0]
+        src = operand[1]
+        imm = operand[2]
+
+        data = 0
+        data += (int(dst[1:]) << 21)
+        data += (int(src[1:]) << 16)
+
+        if '#' in imm:
+            self.imm_validate(int(imm[1:]), 16, self.IMM_SIGNED)
+            if '-' in imm:
+                data += (0x10000 - int(imm[2:]))
+            else:
+                data += int(imm[1:])
+        else:
+            raise ValueError('the immediate data format error')
+
+        return data
+
     def parse_op_ldr(self, operand):
         if len(operand) != 2:
             raise ValueError('instruction operand length not equal to 2')
@@ -354,6 +415,9 @@ class InstructionParser(object):
             return (0b1<<24) + (0b01<<23) + self.parse_op_ldr(operand)
         else:
             return (0b1<<24) + self.parse_op_ldr(operand)
+
+    def parse_op_stro(self, operand):
+        return self.parse_op_ldro(operand)
 
     def parse_op_str(self, operand):
         return self.parse_op_ldr(operand)
@@ -444,7 +508,7 @@ class InstructionParser(object):
 
     def parse_op_gopr(self, operand):
         if len(operand) != 3:
-            raise ValueError('instruction operands not equal to 2')
+            raise ValueError('instruction operands not equal to 3')
 
         mod = operand[0]
         self.imm_validate(int(mod[1:]), 3, self.IMM_UNSIGNED)
@@ -496,8 +560,30 @@ class InstructionParser(object):
 
         return imm
 
+    def parse_op_not(self, operand):
+        if len(operand) != 2:
+            raise ValueError('instruction operands not equal to 2')
+
+        dst = operand[0]
+        src = operand[1]
+
+        imm = 0
+        imm += (int(dst[1:])<<16)
+
+        if '#' in src:
+            self.imm_validate(int(src[1:]), 16, self.IMM_UNSIGNED)
+            imm += (0b1 << 24)
+            imm += int(src[1:])
+        else:
+            imm += (int(src[1:])<<8)
+
+        return imm
+
     def parse_op_orr(self, operand):
         return self.parse_op_and(operand)
+
+    def parse_op_xor(self, operand):
+        return self.parse_op_not(operand)
 
     def parse_op_lsr(self, operand):
         if len(operand) != 2:
@@ -562,7 +648,7 @@ class InstructionParser(object):
 
         return imm
 
-    def parse_op_move(self, operand):
+    def parse_op_move(self, operand, cond):
         if len(operand) != 2:
             raise ValueError('instruction operands not equal to 2')
 
@@ -570,6 +656,8 @@ class InstructionParser(object):
         src = operand[1]
 
         imm = 0
+        imm += (cond << 22)
+
         imm += (int(dst[1:])<<16)
 
         if '#' in src:
@@ -613,7 +701,8 @@ class InstructionParser(object):
             if op_code == 'bl': # branch with LR updated
                 code += (0b1<<22)
             code += self.parse_op_b(operand, cond, inst_label_list, index)
-
+        if op_code == 'ldro':
+            code += self.parse_op_ldro(operand)
         if op_code == 'ldr':
             code += self.parse_op_ldr(operand)
         if op_code == 'ldrb':
@@ -628,6 +717,8 @@ class InstructionParser(object):
             code += self.parse_op_ldm(operand)
         if op_code == 'pop':
             code += self.parse_op_pop(operand)
+        if op_code == 'lea':
+            code += self.parse_op_lea(operand)
         if op_code == 'str':
             code += self.parse_op_str(operand)
         if op_code == 'strb':
@@ -684,6 +775,14 @@ class InstructionParser(object):
             if op_code == 'and':
                 code += (0b00<<21) # immediate with 0 extended & apply to the word     
             code += self.parse_op_and(operand)
+        if op_code == 'not' or op_code == 'notm' or op_code == 'notl':
+            if op_code == 'notl':
+                code += (0b10<<21) # only apply to 16 LSB
+            if op_code == 'notm':
+                code += (0b01<<21) # only apply to 16 MSB
+            if op_code == 'not':
+                code += (0b00<<21) # immediate with 0 extended & apply to the word
+            code += self.parse_op_not(operand)
         if op_code == 'orr' or op_code == 'orrm' or op_code == 'orrl':
             if op_code == 'orrl':
                 code += (0b10<<21) # only apply to 16 LSB
@@ -692,6 +791,14 @@ class InstructionParser(object):
             if op_code == 'orr':
                 code += (0b00<<21) # immediate with 0 extended & apply to the word     
             code += self.parse_op_orr(operand)
+        if op_code == 'xor' or op_code == 'xorm' or op_code == 'xorl':
+            if op_code == 'xorl':
+                code += (0b10<<21) # only apply to 16 LSB
+            if op_code == 'xorm':
+                code += (0b01<<21) # only apply to 16 MSB
+            if op_code == 'xor':
+                code += (0b00<<21) # immediate with 0 extended & apply to the word
+            code += self.parse_op_xor(operand)
         if op_code == 'lsl':
             code += self.parse_op_lsl(operand)
         if op_code == 'lsr':
@@ -708,8 +815,21 @@ class InstructionParser(object):
             if op_code == 'movl':
                 code += (0b01<<21) # only apply to 16 LSB
             code += self.parse_op_mov(operand)
-        if op_code == 'move':
-            code += self.parse_op_move(operand)
+        if op_code == 'cmov' or op_code == 'cmoveq' or op_code == 'cmovgt' or op_code == 'cmovlt' or op_code == 'cmovne' or op_code == 'cmovle' or op_code == 'cmovge':
+            cond = 0b110
+            if op_code == 'cmovgt':
+                cond = 0b000
+            if op_code == 'cmoveq':
+                cond = 0b010
+            if op_code == 'cmovlt':
+                cond = 0b100
+            if op_code == 'cmovne':
+                cond = 0b011
+            if op_code == 'cmovle':
+                cond = 0b001
+            if op_code == 'cmovge':
+                cond = 0b101
+            code += self.parse_op_move(operand, cond)
 
         return code
 
@@ -946,7 +1066,9 @@ def parse_args():
     return args
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = {}
+    args["i"] = "luna_repeat.s"
+    args["o"] = "luna_repeat"
     input = args['i']
     formats = {'hex':0, 'h':0, 'c':0}
     h_file = None
