@@ -611,15 +611,17 @@ class InstructionParser(object):
         return self.parse_op_lsr(operand)
 
     def parse_op_mul(self, operand):
-        if len(operand) != 2:
+        if len(operand) != 3:
             raise ValueError('instruction operands not equal to 2')
 
-        dst = operand[0]
-        src = operand[1]
+        dst0 = operand[0]
+        dst1 = operand[1]
+        src  = operand[2]
 
         imm = 0
-        imm += (int(dst[1:])<<16)
-        imm += (int(src[1:])<<8)
+        imm += (int(dst0[1:]) << 21)
+        imm += (int(dst1[1:]) << 16)
+        imm += (int(src[1:]) << 8)
 
         return imm
 
@@ -721,6 +723,8 @@ class InstructionParser(object):
             code += self.parse_op_lea(operand)
         if op_code == 'str':
             code += self.parse_op_str(operand)
+        if op_code == 'stro':
+            code += self.parse_op_stro(operand)
         if op_code == 'strb':
             code += self.parse_op_strb(operand)
         if op_code == 'strh':
