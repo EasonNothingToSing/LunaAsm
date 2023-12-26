@@ -670,8 +670,16 @@ class InstructionParser(object):
         imm += (int(dst[1:])<<16)
 
         if '#' in src:
-            raise ValueError('the Rx has to be a register, not immediate number')                
+            self.imm_validate(int(src[1:]), 16, self.IMM_BOTH)
+            imm += (0b1 << 24)
+            if '-' in src:
+                imm += (0x10000 - int(src[2:]))
+            else:
+                imm += int(src[1:])
+            if int(src[1:]) > 0x7FFF:
+                imm += (0b1<<25)
         else:
+            imm += (0b1 << 25)
             imm += (int(src[1:])<<8)
 
         return imm
