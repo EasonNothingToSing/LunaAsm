@@ -113,8 +113,15 @@ class InstructionParser(object):
         'xor'   :   0b010011,
         'asr'   :   0b010100, 
         'lsr'   :   0b010100, 
-        'lsl'   :   0b010101, 
-        'mul'   :   0b010110, 
+        'lsl'   :   0b010101,
+        'mul'   :   0b010110,
+        'muls'  :   0b010110,
+        'mulsb' :   0b010110,
+        'mulb'  :   0b010110,
+        'mulshl':   0b010110,
+        'mulhl' :   0b010110,
+        'mulshm':   0b010110,
+        'mulhm' :   0b010110,
         'mov'   :   0b011000, 
         'movb'  :   0b011000, 
         'movh'  :   0b011000, 
@@ -611,17 +618,17 @@ class InstructionParser(object):
         return self.parse_op_lsr(operand)
 
     def parse_op_mul(self, operand):
-        if len(operand) != 3:
+        if len(operand) != 2:
             raise ValueError('instruction operands not equal to 2')
 
-        dst0 = operand[0]
-        dst1 = operand[1]
-        src  = operand[2]
+        dst = operand[0]
+        src = operand[1]
+
 
         imm = 0
-        imm += (int(dst0[1:]) << 21)
-        imm += (int(dst1[1:]) << 16)
-        imm += (int(src[1:]) << 8)
+        imm += (int(dst[1:])<<16)
+
+        imm += (int(src[1:])<<8)
 
         return imm
 
@@ -809,7 +816,23 @@ class InstructionParser(object):
             code += self.parse_op_lsr(operand)
         if op_code == 'asr':
             code += self.parse_op_asr(operand)
-        if op_code == 'mul':
+        if op_code == 'mul' or op_code == 'muls' or op_code == 'mulsb' or op_code == 'mulb' or op_code == 'mulshl' or op_code == 'mulhl' or op_code == 'mulshm' or op_code == 'mulhm':
+            if op_code == 'mul':
+                code += (0b100 << 21)
+            if op_code == 'muls':
+                pass
+            if op_code == 'mulsb':
+                code += (0b010 << 21)
+            if op_code == 'mulb':
+                code += (0b110 << 21)
+            if op_code == 'mulshl':
+                code += (0b001 << 21)
+            if op_code == 'mulhl':
+                code += (0b101 << 21)
+            if op_code == 'mulshm':
+                code += (0b011 << 21)
+            if op_code == 'mulhm':
+                code += (0b111 << 21)
             code += self.parse_op_mul(operand)
         if op_code == 'mov' or op_code == 'movb' or op_code == 'movh' or op_code == 'movl':
             if op_code == 'movb':
