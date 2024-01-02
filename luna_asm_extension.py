@@ -5,10 +5,13 @@ class InstructionExtension(object):
     instruction_dict = {
         'memc'  :   0b100001, 
         'mnts'  :   0b100010, 
-        'mntx'  :   0b100011, 
-        'dstm0' :   0b100101, 
+        'dstm0' :   0b100101,
         'dstm1' :   0b100111, 
-        'dstm2' :   0b101000, 
+        'dstm2' :   0b101000,
+        'ares0' :   0b100100,
+        'ares1' :   0b100100,
+        'ares2' :   0b100100,
+        'ares3' :   0b100100,
         'iow'   :   0b101001, 
         'dprc'  :   0b100110,
         'rst'   :   0b111000,
@@ -21,7 +24,7 @@ class InstructionExtension(object):
         # instructions below may have consecutive ones which require merging before parsing
         'dstm0' :   0b100101, 
         'dstm1' :   0b100111, 
-        'dstm2' :   0b101000, 
+        'dstm2' :   0b101000,
         }
 
     operand_memc_vals = {
@@ -84,6 +87,95 @@ class InstructionExtension(object):
         
         }
 
+    operand_mnts_para_val = {
+        'm0l': 1,
+        'iord0': 1,
+        'iowrl': 1,
+        'm0p0': 1,
+        'prd0': 1,
+        'm0h': 2,
+        'iord1': 2,
+        'iowrh': 2,
+        'm0p1': 2,
+        'prd1': 2,
+        'm1l': 3,
+        'ioahb': 3,
+        'iowr': 3,
+        'm1p0': 3,
+        'm1h': 4,
+        'cosl': 4,
+        'm1p1': 4,
+        's0': 5,
+        'cosh': 5,
+        's1': 6,
+        'r8': 6,
+        'pe': 7,
+        'r8r9': 7,
+        'sigmoid': 8,
+        'grp0': 8,
+        'm0p0_0': 8,
+        's0_0': 8,
+        'tanh': 9,
+        'grp1': 9,
+        'm0p0_1': 9,
+        's0_1': 9,
+        'grp2': 10,
+        'm0p0_2': 10,
+        's0_2': 10,
+        'grp3': 11,
+        'm0p0_3': 11,
+        's0_3': 11,
+        'grp4': 12,
+        'm0p0_4': 12,
+        's0_4': 12,
+        'grp5': 13,
+        'm0p0_5': 13,
+        's0_5': 13,
+        'grp6': 14,
+        'm0p0_6': 14,
+        's0_6': 14,
+        'grp7': 15,
+        'm0p0_7': 15,
+        's0_7': 15,
+        'm0p1_0': 16,
+        's1_0': 16,
+        'm0p1_1': 17,
+        's1_1': 17,
+        'm0p1_2': 18,
+        's1_2': 18,
+        'm0p1_3': 19,
+        's1_3': 19,
+        'm0p1_4': 20,
+        's1_4': 20,
+        'm0p1_5': 21,
+        's1_5': 21,
+        'm0p1_6': 22,
+        's1_6': 22,
+        'm0p1_7': 23,
+        's1_7': 23,
+        'm1p0_0': 24,
+        'm1p0_1': 25,
+        'm1p0_2': 26,
+        'm1p0_3': 27,
+        'm1p0_4': 28,
+        'm1p0_5': 29,
+        'm1p0_6': 30,
+        'm1p0_7': 31,
+        'm1p1_0': 32,
+        'm1p1_1': 33,
+        'm1p1_2': 34,
+        'm1p1_3': 35,
+        'm1p1_4': 36,
+        'm1p1_5': 37,
+        'm1p1_6': 38,
+        'm1p1_7': 39,
+    }
+
+    operand_mnts_mode_val = {
+        'two_mode'  : 1,
+        'four_mode' : 2,
+    }
+
     operand_mnts_params = [
         # parameters in op without '='
         {
@@ -93,48 +185,48 @@ class InstructionExtension(object):
         {
             'sel'       :   {'bit':21, 'val':operand_mnts_vals},
   
-            'din'       :   {'bit':0, 'val':operand_mnts_vals},
-            'mode0'     :   {'bit':3, 'val':operand_mnts_vals},
-            'mode1'     :   {'bit':5, 'val':operand_mnts_vals},
-            'sync'      :   {'bit':7, 'val':operand_mnts_vals},
+            'din'       :   {'bit':0, 'val':operand_mnts_para_val},
+            'mode0'     :   {'bit':3, 'val':operand_mnts_mode_val},
+            'mode1'     :   {'bit':5, 'val':operand_mnts_mode_val},
+            'sync'      :   {'bit':7, 'val':operand_mnts_para_val},
 
-            'p0-iodat'  :   {'bit':0, 'val':operand_mnts_vals},
-            'p0-lmdat0' :   {'bit':3, 'val':operand_mnts_vals},
-            'p0-lmdat1' :   {'bit':7, 'val':operand_mnts_vals},
-            'p0-lmdat2' :   {'bit':11, 'val':operand_mnts_vals},
-            'p0-lmdat3' :   {'bit':15, 'val':operand_mnts_vals},
+            'p0-iodat'  :   {'bit':0, 'val':operand_mnts_para_val},
+            'p0-lmdat0' :   {'bit':3, 'val':operand_mnts_para_val},
+            'p0-lmdat1' :   {'bit':7, 'val':operand_mnts_para_val},
+            'p0-lmdat2' :   {'bit':11, 'val':operand_mnts_para_val},
+            'p0-lmdat3' :   {'bit':15, 'val':operand_mnts_para_val},
 
-            'p1-iodat'  :   {'bit':0, 'val':operand_mnts_vals},
-            'p1-lmdat0' :   {'bit':3, 'val':operand_mnts_vals},
-            'p1-lmdat1' :   {'bit':7, 'val':operand_mnts_vals},
-            'p1-lmdat2' :   {'bit':11, 'val':operand_mnts_vals},
-            'p1-lmdat3' :   {'bit':15, 'val':operand_mnts_vals},
+            'p1-iodat'  :   {'bit':0, 'val':operand_mnts_para_val},
+            'p1-lmdat0' :   {'bit':3, 'val':operand_mnts_para_val},
+            'p1-lmdat1' :   {'bit':7, 'val':operand_mnts_para_val},
+            'p1-lmdat2' :   {'bit':11, 'val':operand_mnts_para_val},
+            'p1-lmdat3' :   {'bit':15, 'val':operand_mnts_para_val},
 
-            'mode'      :   {'bit':3, 'val':operand_mnts_vals},
+            'mode'      :   {'bit':3, 'val':operand_mnts_mode_val},
 
-            'row'       :   {'bit':3,  'val':operand_mnts_vals},
-            'col'       :   {'bit':11, 'val':operand_mnts_vals},
-            'overcheck' :   {'bit':20, 'val':operand_mnts_vals},
+            'row'       :   {'bit':3,  'val':operand_mnts_para_val},
+            'col'       :   {'bit':11, 'val':operand_mnts_para_val},
+            'overcheck' :   {'bit':20, 'val':operand_mnts_para_val},
 
-            'inside'    :   {'bit':0,  'val':operand_mnts_vals},
-            'outside'   :   {'bit':3,  'val':operand_mnts_vals},
+            'inside'    :   {'bit':0,  'val':operand_mnts_para_val},
+            'outside'   :   {'bit':3,  'val':operand_mnts_para_val},
 
-            'rd'        :   {'bit':0,  'val':operand_mnts_vals},
-            'wr'        :   {'bit':0,  'val':operand_mnts_vals},
+            'rd'        :   {'bit':0,  'val':operand_mnts_para_val},
+            'wr'        :   {'bit':0,  'val':operand_mnts_para_val},
 
-            'lmrd'      :   {'bit':0,  'val':operand_mnts_vals},
-            'lmwr'      :   {'bit':5,  'val':operand_mnts_vals},
+            'lmrd'      :   {'bit':0,  'val':operand_mnts_para_val},
+            'lmwr'      :   {'bit':5,  'val':operand_mnts_para_val},
 
         }
     ]
 
     operand_mntx_vals = {
-        'iord0' : 1, 
-        'iord1' : 2, 
-        'iowr'  : 3, 
-        'io'    : 0, 
-        'lut'   : 1, 
-        
+        'iord0' : 1,
+        'iord1' : 2,
+        'iowr'  : 3,
+        'io'    : 0,
+        'lut'   : 1,
+
         }
 
     operand_mntx_params = [
@@ -147,7 +239,7 @@ class InstructionExtension(object):
             'lmgrp'     :   {'bit':21, 'val':0b10001},
             'iolut'     :   {'bit':21, 'val':0b10010},
             'port'      :   {'bit':21, 'val':0b10011},
-            'mode'      :   {'bit':21, 'val':0b11000},            
+            'mode'      :   {'bit':21, 'val':0b11000},
         },
         # parameters in op with '='
         {
@@ -630,8 +722,6 @@ class InstructionExtension(object):
             code += self.parse_op_memc(operand)
         if op_code == 'mnts':
             code += self.parse_op_mnts(operand)
-        if op_code == 'mntx':
-            code += self.parse_op_mntx(operand)
         if op_code == 'dstm0':
             code += self.parse_op_dstm0(operand)
         if op_code == 'dstm1':
