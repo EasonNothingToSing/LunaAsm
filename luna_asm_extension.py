@@ -8,10 +8,7 @@ class InstructionExtension(object):
         'dstm0' :   0b100101,
         'dstm1' :   0b100111, 
         'dstm2' :   0b101000,
-        'ares0' :   0b100100,
-        'ares1' :   0b100100,
-        'ares2' :   0b100100,
-        'ares3' :   0b100100,
+        'ares'  :   0b100100,
         'iow'   :   0b101001, 
         'dprc'  :   0b100110,
         'rst'   :   0b111000,
@@ -217,6 +214,52 @@ class InstructionExtension(object):
             'lmrd'      :   {'bit':0,  'val':operand_mnts_para_val},
             'lmwr'      :   {'bit':5,  'val':operand_mnts_para_val},
 
+        }
+    ]
+
+    operand_ares_mode = {
+        'master'  : 0,
+    }
+
+    operand_ares_select = {
+        'select0' : 0,
+        'select1' : 1,
+        'select2' : 2,
+        'select3' : 3,
+    }
+
+    operand_ares_params = [
+        # master0 select0
+        {
+            'chs' : {'bit':16, 'val':None},
+            'crs' : {'bit':14, 'val':None},
+            'cmc' : {'bit':8 , 'val':None},
+            'ces' : {'bit':0, 'val':None},
+        },
+
+        # master0 select1
+        {
+            'elc' : {'bit': 18, 'val': None},
+            'efos': {'bit': 16, 'val': None},
+            'els': {'bit': 14, 'val': None},
+            'elf': {'bit': 8, 'val': None},
+            'efcs': {'bit': 0, 'val': None},
+        },
+
+        # master0 select2
+        {
+            'aps': {'bit': 19, 'val': None},
+            'hlcs': {'bit': 18, 'val': None},
+            'mos': {'bit': 14, 'val': None},
+            'eac': {'bit': 8, 'val': None},
+            'cas': {'bit': 0, 'val': None},
+        },
+
+        # master0 select3
+        {
+            'rcils': {'bit': 16, 'val': None},
+            'rcls': {'bit': 14, 'val': None},
+            'dsc': {'bit': 8, 'val': None},
         }
     ]
 
@@ -728,6 +771,8 @@ class InstructionExtension(object):
             code += self.parse_op_dstm1(operand)
         if op_code == 'dstm2':
             code += self.parse_op_dstm2(operand)
+        if op_code == 'ares':
+            code += self.parse_op_ares(operand)
         if op_code == 'iow':
             code += self.parse_op_iow(operand)           
         if op_code == 'dprc':
@@ -788,6 +833,63 @@ class InstructionExtension(object):
                 imm |= (val << self.operand_mnts_params[1][params[0]]['bit'])             
             if len(params) > 2:
                 raise ValueError('invalid op: '+op) 
+
+        return imm
+
+    def parse_op_ares(self, operand):
+        if len(operand) < 1:
+            raise ValueError('instruction operand length error')
+        imm = 0
+        if '#' in operand[0]:
+            imm += (int(operand[0][1:]))
+            return imm
+
+        counter = 0
+
+        mode = operand[0]
+        sel = operand[1]
+
+        # Mode
+        params = mode.split('=')
+        if params[0] != "mode":
+            raise ValueError('invalid op: ' + mode)
+
+        if len(params) != 2:
+            raise ValueError('invalid op: ' + mode)
+        if params[1].isdecimal():
+            counter += int(params[1]) * 4
+            imm += int(params[1]) << 22
+        else:
+            counter += int(self.operand_ares_mode[params[1]]) * 4
+            imm += int(self.operand_ares_mode[params[1]]) << 22
+
+        # Select
+        params = sel.split('=')
+        if params[0] != "sel":
+            raise ValueError('invalid op: ' + mode)
+
+        if len(params) != 2:
+            raise ValueError('invalid op: ' + mode)
+
+        if params[1].isdecimal():
+            counter += int(params[1])
+            imm += int(params[1]) << 12
+        else:
+            counter += int(self.operand_ares_select[params[1]])
+            imm += int(self.operand_ares_select[params[1]]) << 12
+
+        operand = operand[2:]
+
+        for op in operand:
+            params = op.split('=')
+            if len(params) == 2:
+                if params[1].isdecimal():
+                    val = int(params[1])
+                else:
+                    val = self.operand_ares_params[counter][params[0]]['val'][params[1]]
+                imm |= (val << self.operand_ares_params[counter][params[0]]['bit'])
+            if len(params) > 2:
+                raise ValueError('invalid op: '+op)
 
         return imm
 
