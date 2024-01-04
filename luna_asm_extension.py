@@ -22,6 +22,7 @@ class InstructionExtension(object):
         'dstm0' :   0b100101, 
         'dstm1' :   0b100111, 
         'dstm2' :   0b101000,
+        'ares'  :   0b100100,
         }
 
     operand_memc_vals = {
@@ -694,6 +695,44 @@ class InstructionExtension(object):
     def __init__(self):
         print("extension module - [InstructionExtension] loaded")
 
+    def ares_started(self, operand):
+        operand = operand.replace('\t',' ').split(',')
+
+        count = 0
+        try:
+            mode = operand[0].lstrip().rstrip()
+            sel = operand[1].lstrip().rstrip()
+        except IndexError:
+            return -1
+
+        # Mode
+        params = mode.split('=')
+        if params[0] != "mode":
+            return -1
+
+        if len(params) != 2:
+            raise ValueError('invalid op: ' + mode)
+
+        if params[1].isdecimal():
+            count += int(params[1]) * 4
+        else:
+            count += int(self.operand_ares_mode[params[1]]) * 4
+
+        # Select
+        params = sel.split('=')
+        if params[0] != "sel":
+            return -1
+
+        if len(params) != 2:
+            raise ValueError('invalid op: ' + mode)
+
+        if params[1].isdecimal():
+            count += int(params[1])
+        else:
+            count += int(self.operand_ares_select[params[1]])
+
+        return count
+
     def merge(self, op_code, operand, op_code_next, operand_next):
         if op_code != op_code_next:
             return False
@@ -720,6 +759,23 @@ class InstructionExtension(object):
 
         if op_code == 'dstm2':
             params_dict = self.operand_dstm2_params[0]
+
+        if op_code == 'ares':
+            count = 0
+
+            # Find the 'ares' start keyword
+            count = self.ares_started(operand)
+            if count != -1:
+                pass
+            else:
+                raise ValueError("Ares merge error, can't find the start mode and selection")
+
+            next_count = self.ares_started(operand_next)
+            if next_count != -1:
+                # restart ares
+                return False
+
+            return True
 
         operand = operand.replace('\t',' ') 
         items = operand.split(',')
