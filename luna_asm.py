@@ -1101,9 +1101,7 @@ def parse_args():
     return args
 
 if __name__ == "__main__":
-    args = {}
-    args["i"] = "luna_repeat.s"
-    args["o"] = "luna_repeat"
+    args = parse_args()
     input = args['i']
     formats = {'hex':0, 'h':0, 'c':0}
     h_file = None
