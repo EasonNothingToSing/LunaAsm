@@ -242,7 +242,8 @@ class InstructionExtension(object):
 
         # master0 select1
         {
-            'elc' : {'bit': 18, 'val': None},
+            'elc' : {'bit': 19, 'val': None},
+            'hes' : {'bit': 18, 'val': None},
             'efos': {'bit': 16, 'val': None},
             'els': {'bit': 14, 'val': None},
             'elf': {'bit': 8, 'val': None},
