@@ -8,14 +8,14 @@ import glob
 
 # user defined content for the prefix and suffix in hex file
 prefix_hex = [
-#    '0x00000000',
-#    'bl #1',
-#    'push {lr}',
+    #    '0x00000000',
+    #    'bl #1',
+    #    'push {lr}',
 ]
 suffix_hex = [
-#    'pop {lr}',
-#    'b lr',
-#    '0x00000000',
+    #    'pop {lr}',
+    #    'b lr',
+    #    '0x00000000',
 ]
 
 # user defined content for the prefix and suffix in .c file
@@ -267,39 +267,82 @@ class InstructionExtension(object):
         'select3': 3,
     }
 
+    # In ares instruction parser, the filed may have
+
+    # Bits assignment re
+    operand_ares_bits_assignment = r"([a-z|A-Z]+)\[([01]+)\]"
+
+    ########################## Master and selection0
+    # operand_ares_m0s0_chs = r"select_hold_(\d+)"
+    operand_ares_m0s0_crs = r"sel_row(\d+)"
+
+    ########################## Master and selection1
+    operand_ares_m0s1_elc = {
+        "or": 0,
+        "and": 1,
+    }
+    operand_ares_m0s1_hes = {
+        "sel_en": 0,
+        "sel_hold": 1,
+    }
+    operand_ares_m0s1_efos = r"en_from_sour(\d+)"
+    operand_ares_m0s1_els = r"sel_en_line(\d+)"
+
+    ########################## Master and selection2
+    operand_ares_m0s2_aps = {
+        "sel_port0": 0,
+        "sel_port1": 1,
+    }
+
+    operand_ares_m0s2_hlcs = {
+        "sel_low8": 0,
+        "sel_high8": 1,
+    }
+
+    operand_ares_m0s2_mos = r"master_over_sel(\d+)"
+
+    ########################## Master and selection3
+    operand_ares_m0s3_rcls = r"sel_counter_line(\d+)"
+
+    operand_ares_m0s3_dsc = r"data_source(\d+)"
+
     operand_ares_params = [
         # master0 select0
+        # ares master, select0, {chs[xxxx], sel_row(x), cmc[xxxx], ces[xxxxxxxx]}
         {
-            'chs': {'bit': 16, 'val': None},
-            'crs': {'bit': 14, 'val': None},
-            'cmc': {'bit': 8, 'val': None},
-            'ces': {'bit': 0, 'val': None},
+            'chs': {'bit': 16, 'val': 4},
+            'crs': {'bit': 14, 'val': operand_ares_m0s0_crs},
+            'cmc': {'bit': 8, 'val': 4},
+            'ces': {'bit': 0, 'val': 8},
         },
 
         # master0 select1
+        # ares master, select1, {[or|and], [sel_en|sel_hold], en_from_sour(x), sel_en_line(x), elf[xxxx], efcs[xxxxxxxx]}
         {
-            'hes': {'bit': 19, 'val': None},
-            'elc': {'bit': 18, 'val': None},
-            'efos': {'bit': 16, 'val': None},
-            'els': {'bit': 14, 'val': None},
-            'elf': {'bit': 8, 'val': None},
-            'efcs': {'bit': 0, 'val': None},
+            'elc': {'bit': 19, 'val': operand_ares_m0s1_elc},
+            'hes': {'bit': 18, 'val': operand_ares_m0s1_hes},
+            'efos': {'bit': 16, 'val': operand_ares_m0s1_efos},
+            'els': {'bit': 14, 'val': operand_ares_m0s1_els},
+            'elf': {'bit': 8, 'val': 4},
+            'efcs': {'bit': 0, 'val': 8},
         },
 
         # master0 select2
+        # ares master, select2, {[sel_port0 | sel_port1], [sel_low8 | sel_high8], master_over_sel(x), eac[xxxx], cas[xxxxxxxx]}
         {
-            'aps': {'bit': 19, 'val': None},
-            'hlcs': {'bit': 18, 'val': None},
-            'mos': {'bit': 14, 'val': None},
-            'eac': {'bit': 8, 'val': None},
-            'cas': {'bit': 0, 'val': None},
+            'aps': {'bit': 19, 'val': operand_ares_m0s2_aps},
+            'hlcs': {'bit': 18, 'val': operand_ares_m0s2_hlcs},
+            'mos': {'bit': 14, 'val': operand_ares_m0s2_mos},
+            'eac': {'bit': 8, 'val': 4},
+            'cas': {'bit': 0, 'val': 8},
         },
 
         # master0 select3
+        # ares master, select3, {rcils[xxxx], sel_counter_line(x), data_source(x)}
         {
-            'rcils': {'bit': 16, 'val': None},
-            'rcls': {'bit': 14, 'val': None},
-            'dsc': {'bit': 8, 'val': None},
+            'rcils': {'bit': 16, 'val': 4},
+            'rcls': {'bit': 14, 'val': operand_ares_m0s3_rcls},
+            'dsc': {'bit': 8, 'val': operand_ares_m0s3_dsc},
         }
     ]
 
@@ -739,30 +782,42 @@ class InstructionExtension(object):
             return -1
 
         # Mode
-        params = mode.split('=')
-        if params[0] != "mode":
-            return -1
+        if '=' in mode:
+            params = mode.split('=')
+            if params[0] != "mode":
+                return -1
 
-        if len(params) != 2:
-            raise ValueError('invalid op: ' + mode)
+            if len(params) != 2:
+                raise ValueError('invalid op: ' + mode)
 
-        if params[1].isdecimal():
-            count += int(params[1]) * 4
+            if params[1].isdecimal():
+                count += int(params[1]) * 4
+            else:
+                count += int(self.operand_ares_mode[params[1]]) * 4
         else:
-            count += int(self.operand_ares_mode[params[1]]) * 4
+            if mode in self.operand_ares_mode.keys():
+                count += int(self.operand_ares_mode[mode]) * 4
+            else:
+                return -1
 
         # Select
-        params = sel.split('=')
-        if params[0] != "sel":
-            return -1
+        if '=' in sel:
+            params = sel.split('=')
+            if params[0] != "sel":
+                return -1
 
-        if len(params) != 2:
-            raise ValueError('invalid op: ' + mode)
+            if len(params) != 2:
+                raise ValueError('invalid op: ' + mode)
 
-        if params[1].isdecimal():
-            count += int(params[1])
+            if params[1].isdecimal():
+                count += int(params[1])
+            else:
+                count += int(self.operand_ares_select[params[1]])
         else:
-            count += int(self.operand_ares_select[params[1]])
+            if sel in self.operand_ares_select.keys():
+                count += int(self.operand_ares_select[sel])
+            else:
+                return -1
 
         return count
 
@@ -939,46 +994,91 @@ class InstructionExtension(object):
         sel = operand[1]
 
         # Mode
-        params = mode.split('=')
-        if params[0] != "mode":
-            raise ValueError('invalid op: ' + mode)
+        if '=' in mode:
+            params = mode.split('=')
+            if params[0] != "mode":
+                raise ValueError('invalid op: ' + mode)
 
-        if len(params) != 2:
-            raise ValueError('invalid op: ' + mode)
-        if params[1].isdecimal():
-            counter += int(params[1]) * 4
-            imm += int(params[1]) << 22
+            if len(params) != 2:
+                raise ValueError('invalid op: ' + mode)
+            if params[1].isdecimal():
+                counter += int(params[1]) * 4
+                imm += int(params[1]) << 22
+            else:
+                counter += int(self.operand_ares_mode[params[1]]) * 4
+                imm += int(self.operand_ares_mode[params[1]]) << 22
         else:
-            counter += int(self.operand_ares_mode[params[1]]) * 4
-            imm += int(self.operand_ares_mode[params[1]]) << 22
+            if mode in self.operand_ares_mode.keys():
+                counter += int(self.operand_ares_mode[mode]) * 4
+                imm += int(self.operand_ares_mode[mode]) << 22
 
         # Select
-        params = sel.split('=')
-        if params[0] != "sel":
-            raise ValueError('invalid op: ' + mode)
+        if '=' in sel:
+            params = sel.split('=')
+            if params[0] != "sel":
+                raise ValueError('invalid op: ' + mode)
 
-        if len(params) != 2:
-            raise ValueError('invalid op: ' + mode)
+            if len(params) != 2:
+                raise ValueError('invalid op: ' + mode)
 
-        if params[1].isdecimal():
-            counter += int(params[1])
-            imm += int(params[1]) << 12
+            if params[1].isdecimal():
+                counter += int(params[1])
+                imm += int(params[1]) << 12
+            else:
+                counter += int(self.operand_ares_select[params[1]])
+                imm += int(self.operand_ares_select[params[1]]) << 12
         else:
-            counter += int(self.operand_ares_select[params[1]])
-            imm += int(self.operand_ares_select[params[1]]) << 12
+            if sel in self.operand_ares_select.keys():
+                counter += int(self.operand_ares_select[sel])
+                imm += int(self.operand_ares_select[sel]) << 12
 
         operand = operand[2:]
 
         for op in operand:
-            params = op.split('=')
-            if len(params) == 2:
-                if params[1].isdecimal():
-                    val = int(params[1])
+            if '=' in op:
+                params = op.split('=')
+                if len(params) == 2:
+                    if params[1].isdecimal():
+                        val = int(params[1])
+                    else:
+                        val = self.operand_ares_params[counter][params[0]]['val'][params[1]]
+                    imm |= (val << self.operand_ares_params[counter][params[0]]['bit'])
+                if len(params) > 2:
+                    raise ValueError('invalid op: ' + op)
+            else:
+                for i in self.operand_ares_params[counter].items():
+                    if isinstance(i[1]['val'], str):
+                        val_list = re.findall(i[1]['val'], op)
+                        if val_list:
+                            imm |= (int(val_list[0]) << i[1]['bit'])
+                            break
+                        continue
+                    elif isinstance(i[1]['val'], dict):
+                        if op in i[1]['val'].keys():
+                            imm |= int(i[1]['val'][op]) << i[1]['bit']
+                            break
+                        else:
+                            continue
+                    elif isinstance(i[1]['val'], int):
+                        # find match data -> [type, binary]
+                        val_list = re.findall(self.operand_ares_bits_assignment, op)
+                        if val_list:
+                            val_list = val_list[0]
+                            if len(val_list) != 2:
+                                raise ValueError("ares instruction trigger error in" + op)
+                            if val_list[0] != i[0]:
+                                continue
+                            if len(val_list[1]) != i[1]['val']:
+                                raise ValueError("ares instruction " + op + "length can't match")
+                            imm |= int(val_list[1], base=2) << self.operand_ares_params[counter][val_list[0]]['bit']
+                            break
+                        else:
+                            continue
+                    else:
+                        # Only support assignment statement
+                        raise ValueError(op + "parameter unsupport!!!")
                 else:
-                    val = self.operand_ares_params[counter][params[0]]['val'][params[1]]
-                imm |= (val << self.operand_ares_params[counter][params[0]]['bit'])
-            if len(params) > 2:
-                raise ValueError('invalid op: ' + op)
+                    raise ValueError('parameter ' + op + " not support")
 
         return imm
 
@@ -1144,8 +1244,6 @@ class InstructionExtension(object):
 
         return imm
 
-        return imm
-
     def parse_op_init(self, operand):
         if len(operand) < 1:
             raise ValueError('instruction operand length error')
@@ -1224,16 +1322,16 @@ class InstFuncLabel:
         self.list_inst = []
         self.list_label = []
 
-    def find_label_pos(self,label):        
+    def find_label_pos(self, label):
         return self.list_label.index(label)
 
-    def add(self,inst, label):        
+    def add(self, inst, label):
         self.list_inst.append(inst)
         self.list_label.append(label)
         self.size += 1
 
     def length(self):
-        return self.size     
+        return self.size
 
 
 class InstructionParser(object):
@@ -1241,97 +1339,97 @@ class InstructionParser(object):
     instruction_dict = {
         'jump'  :   0b000001, 
         'repeat':   0b001000,
-        'wait'  :   0b100000, 
-        'cmp'   :   0b000010, 
-        'b'     :   0b000011, 
-        'bl'    :   0b000011, 
-        'bx'    :   0b000011, 
-        'beq'   :   0b000011, 
-        'blt'   :   0b000011, 
-        'bgt'   :   0b000011, 
-        'bne'   :   0b000011, 
-        'ble'   :   0b000011, 
-        'bge'   :   0b000011,
-        'ldro'  :   0b000100,
-        'lea'   :   0b000101,
-        'ldr'   :   0b001010, 
-        'ldrb'  :   0b001010, 
-        'ldrh'  :   0b001010, 
-        'ldrsb' :   0b001010, 
-        'ldrsh' :   0b001010, 
-        'ldm'   :   0b001010, 
-        'pop'   :   0b001010,
-        'stro'  :   0b000110,
-        'str'   :   0b001011, 
-        'strb'  :   0b001011, 
-        'strh'  :   0b001011, 
-        'strsb' :   0b001011, 
-        'strsh' :   0b001011, 
-        'stm'   :   0b001011, 
-        'push'  :   0b001011, 
-        'setr'  :   0b010000, 
-        'setrh' :   0b010000, 
-        'setrl' :   0b010000, 
-        'seti'  :   0b010111, 
-        'setih' :   0b010111, 
-        'setil' :   0b010111, 
-        'gopr'  :   0b010001,
-        'addl'  :   0b010001, 
-        'addm'  :   0b010001, 
-        'add'   :   0b010001, 
-        'subl'  :   0b010001,
-        'subm'  :   0b010001,
-        'sub'   :   0b010001,
-        'andl'  :   0b010010, 
-        'andm'  :   0b010010, 
-        'and'   :   0b010010,
-        'notl'  :   0b010010,
-        'notm'  :   0b010010,
-        'not'   :   0b010010,
-        'orrl'  :   0b010011, 
-        'orrm'  :   0b010011, 
-        'orr'   :   0b010011,
-        'xorl'  :   0b010011,
-        'xorm'  :   0b010011,
-        'xor'   :   0b010011,
-        'asr'   :   0b010100, 
-        'lsr'   :   0b010100, 
-        'lsl'   :   0b010101,
-        'mul'   :   0b010110,
-        'muls'  :   0b010110,
-        'mulsb' :   0b010110,
-        'mulb'  :   0b010110,
-        'mulshl':   0b010110,
-        'mulhl' :   0b010110,
-        'mulshm':   0b010110,
-        'mulhm' :   0b010110,
-        'mov'   :   0b011000, 
-        'movb'  :   0b011000, 
-        'movh'  :   0b011000, 
-        'movl'  :   0b011000, 
-        'cmov'  :   0b011001,
-        'cmoveq':   0b011001,
-        'cmovgt':   0b011001,
-        'cmovlt':   0b011001,
-        'cmovne':   0b011001,
-        'cmovle':   0b011001,
-        'cmovge':   0b011001,
-        }
+        'wait': 0b100000,
+        'cmp': 0b000010,
+        'b': 0b000011,
+        'bl': 0b000011,
+        'bx': 0b000011,
+        'beq': 0b000011,
+        'blt': 0b000011,
+        'bgt': 0b000011,
+        'bne': 0b000011,
+        'ble': 0b000011,
+        'bge': 0b000011,
+        'ldro': 0b000100,
+        'lea': 0b000101,
+        'ldr': 0b001010,
+        'ldrb': 0b001010,
+        'ldrh': 0b001010,
+        'ldrsb': 0b001010,
+        'ldrsh': 0b001010,
+        'ldm': 0b001010,
+        'pop': 0b001010,
+        'stro': 0b000110,
+        'str': 0b001011,
+        'strb': 0b001011,
+        'strh': 0b001011,
+        'strsb': 0b001011,
+        'strsh': 0b001011,
+        'stm': 0b001011,
+        'push': 0b001011,
+        'setr': 0b010000,
+        'setrh': 0b010000,
+        'setrl': 0b010000,
+        'seti': 0b010111,
+        'setih': 0b010111,
+        'setil': 0b010111,
+        'gopr': 0b010001,
+        'addl': 0b010001,
+        'addm': 0b010001,
+        'add': 0b010001,
+        'subl': 0b010001,
+        'subm': 0b010001,
+        'sub': 0b010001,
+        'andl': 0b010010,
+        'andm': 0b010010,
+        'and': 0b010010,
+        'notl': 0b010010,
+        'notm': 0b010010,
+        'not': 0b010010,
+        'orrl': 0b010011,
+        'orrm': 0b010011,
+        'orr': 0b010011,
+        'xorl': 0b010011,
+        'xorm': 0b010011,
+        'xor': 0b010011,
+        'asr': 0b010100,
+        'lsr': 0b010100,
+        'lsl': 0b010101,
+        'mul': 0b010110,
+        'muls': 0b010110,
+        'mulsb': 0b010110,
+        'mulb': 0b010110,
+        'mulshl': 0b010110,
+        'mulhl': 0b010110,
+        'mulshm': 0b010110,
+        'mulhm': 0b010110,
+        'mov': 0b011000,
+        'movb': 0b011000,
+        'movh': 0b011000,
+        'movl': 0b011000,
+        'cmov': 0b011001,
+        'cmoveq': 0b011001,
+        'cmovgt': 0b011001,
+        'cmovlt': 0b011001,
+        'cmovne': 0b011001,
+        'cmovle': 0b011001,
+        'cmovge': 0b011001,
+    }
 
     operand_wait = {
-        'non-block' : 1<<25,
-        'block'     : 0<<25,
-        'interrupt' : 1<<24,
-        'event'     : 1<<23,
-        'status'    : 1<<22,
-        'id'        : 1<<8, 
-        'iow'       : 1<<5, 
-        'master0'   : 1<<4, 
-        'master1'   : 1<<3, 
-        'slave0'    : 1<<2, 
-        'slave1'    : 1<<1, 
-        'pe'        : 1<<0,     
-        }
+        'non-block': 1 << 25,
+        'block': 0 << 25,
+        'interrupt': 1 << 24,
+        'event': 1 << 23,
+        'status': 1 << 22,
+        'id': 1 << 8,
+        'iow': 1 << 5,
+        'master0': 1 << 4,
+        'master1': 1 << 3,
+        'slave0': 1 << 2,
+        'slave1': 1 << 1,
+        'pe': 1 << 0,
+    }
 
     inst_extension = None
 
@@ -1340,28 +1438,28 @@ class InstructionParser(object):
     IMM_SIGNED = 1  
     IMM_UNSIGNED = 0
 
-    def __init__(self, extension = False):
+    def __init__(self, extension=False):
         if extension == True:
             self.inst_extension = InstructionExtension()
 
     def imm_validate(self, val, bits, signed):
         if bits < 1 or bits > 32:
             raise ValueError('the immediate number has invalid bits')
-        if signed != self.IMM_SIGNED and signed != self.IMM_UNSIGNED and signed != self.IMM_BOTH :
+        if signed != self.IMM_SIGNED and signed != self.IMM_UNSIGNED and signed != self.IMM_BOTH:
             raise ValueError('the immediate number has invalid sign')
 
         max_val = 0
         min_val = 0
         if signed == self.IMM_SIGNED:
-            max_val = ((2**(bits-1))-1)
-            min_val = (-(2**(bits-1)))
+            max_val = ((2 ** (bits - 1)) - 1)
+            min_val = (-(2 ** (bits - 1)))
         elif signed == self.IMM_UNSIGNED:
-            max_val = ((2**bits)-1)
+            max_val = ((2 ** bits) - 1)
             min_val = 0
-        else: # can be signed or unsigned depends on the sign bit
-            max_val = ((2**bits)-1)
-            min_val = (-(2**(bits-1)))
-        
+        else:  # can be signed or unsigned depends on the sign bit
+            max_val = ((2 ** bits) - 1)
+            min_val = (-(2 ** (bits - 1)))
+
         if val < min_val or val > max_val:
             raise ValueError('the immediate number is out of range [%d : %d]' % (min_val, max_val))
 
@@ -1393,8 +1491,8 @@ class InstructionParser(object):
         self.imm_validate(int(offset[1:]), 5, self.IMM_UNSIGNED)
 
         imm = 0
-        imm += (int(loop_id[1:])<<24)
-        imm += (int(loop_num[1:])<<8)
+        imm += (int(loop_id[1:]) << 24)
+        imm += (int(loop_num[1:]) << 8)
         imm += (int(offset[1:]))
 
         return imm
@@ -1411,10 +1509,10 @@ class InstructionParser(object):
         for each in operand:
             if each not in self.operand_wait:
                 if re.match('id([0-3]?[0-9]?)', each) != None:
-                    imm += (int(each[2:])<<8)
+                    imm += (int(each[2:]) << 8)
                 else:
                     print('********************************')
-                    print('unrecognized operand: '+each+'\n')
+                    print('unrecognized operand: ' + each + '\n')
                     print('supported operands for WAIT: ')
                     print(self.operand_wait.keys())
                     print('********************************\n')
@@ -1434,16 +1532,16 @@ class InstructionParser(object):
         imm = 0
         if '#' in src:
             self.imm_validate(int(src[1:]), 16, self.IMM_BOTH)
-            imm += (1<<24)
+            imm += (1 << 24)
             if '-' in src:
                 imm += (0x10000 - int(src[2:]))
             else:
                 imm += int(src[1:])
             if int(src[1:]) > 0x7FFF:
-                imm += (0b1<<25)
+                imm += (0b1 << 25)
         else:
-            imm += (int(src[1:])<<8)
-        imm += (int(dst[1:])<<16)
+            imm += (int(src[1:]) << 8)
+        imm += (int(dst[1:]) << 16)
 
         return imm
 
@@ -1455,22 +1553,22 @@ class InstructionParser(object):
 
         imm = 0
 
-        imm += (cond<<19)
+        imm += (cond << 19)
 
-        if dst.startswith('#'): 
+        if dst.startswith('#'):
             self.imm_validate(int(dst[1:]), 16, self.IMM_SIGNED)
-            imm += (0b1 << 24) 
+            imm += (0b1 << 24)
             if '-' in dst:
                 imm += (0x10000 - int(dst[2:]))
             else:
                 imm += int(dst[1:])
         elif re.match('r([0-3]?[0-9]?)', dst) != None:
-            imm += (int(dst[1:])<<8)
-            imm += (0b1<<23) # direct pc mode
-        else:# label needs an offset
-            imm += (1<<24)
+            imm += (int(dst[1:]) << 8)
+            imm += (0b1 << 23)  # direct pc mode
+        else:  # label needs an offset
+            imm += (1 << 24)
             dst_pos = inst_label_list.find_label_pos(dst)
-            offset = (dst_pos-index)
+            offset = (dst_pos - index)
             if offset > 32767 or offset < -32768:
                 raise ValueError('b instruction has an out range offset: ' + offset)
             if offset < 0:
@@ -1533,27 +1631,27 @@ class InstructionParser(object):
         src = operand[1]
 
         imm = 0
-        imm += (int(dst[1:])<<15)
+        imm += (int(dst[1:]) << 15)
         if '[' in src:
-            src = src.replace('[','')
+            src = src.replace('[', '')
         if ']' in src:
-            src = src.replace(']','')
+            src = src.replace(']', '')
 
-        imm += (int(src[1:])<<8)
+        imm += (int(src[1:]) << 8)
 
         return imm
 
     def parse_op_ldrb(self, operand):
-        return (0b1<<25) + (0b10<<21) + self.parse_op_ldr(operand)
+        return (0b1 << 25) + (0b10 << 21) + self.parse_op_ldr(operand)
 
     def parse_op_ldrh(self, operand):
-        return (0b1<<25) + (0b01<<21) + self.parse_op_ldr(operand)
+        return (0b1 << 25) + (0b01 << 21) + self.parse_op_ldr(operand)
 
     def parse_op_ldrsb(self, operand):
-        return (0b10<<21) + self.parse_op_ldr(operand)
+        return (0b10 << 21) + self.parse_op_ldr(operand)
 
     def parse_op_ldrsh(self, operand):
-        return (0b01<<21) + self.parse_op_ldr(operand)
+        return (0b01 << 21) + self.parse_op_ldr(operand)
 
     def parse_op_ldm(self, operand):
         reglist = []
@@ -1562,14 +1660,14 @@ class InstructionParser(object):
             regs = operand[1].split('-')
             operand[1] = regs[0]
             rng = int(regs[1][1:]) - int(regs[0][1:])
-            if  rng> 7 or rng < 0:
+            if rng > 7 or rng < 0:
                 raise ValueError('reglist is invalid')
             for each in range(rng):
                 reglist.append(1)
-            for each in range(7-rng):
+            for each in range(7 - rng):
                 reglist.append(0)
         else:
-            reglist = [1,0,0,0,0,0,0,0]
+            reglist = [1, 0, 0, 0, 0, 0, 0, 0]
             regs = operand[1:]
             base = int(regs[0][1:])
             for each in regs[1:]:
@@ -1580,20 +1678,20 @@ class InstructionParser(object):
         msk = 0b00000000
         for i in range(8):
             if reglist[i] == 0:
-                msk = msk | (0b1<<i)
+                msk = msk | (0b1 << i)
         operand = [operand[1], operand[0]]
-        return (0b01<<23) + msk + self.parse_op_ldr(operand)
+        return (0b01 << 23) + msk + self.parse_op_ldr(operand)
 
     def parse_op_pop(self, operand):
         if len(operand) != 1:
             raise ValueError('instruction operand length not equal to 1')
 
-        operand.append('[r31]') # append [sp]
+        operand.append('[r31]')  # append [sp]
         if '-' in operand[0]:
             operand[0] = operand[0][:operand[0].find('-')]
-            return (0b1<<24) + (0b01<<23) + self.parse_op_ldr(operand)
+            return (0b1 << 24) + (0b01 << 23) + self.parse_op_ldr(operand)
         else:
-            return (0b1<<24) + self.parse_op_ldr(operand)
+            return (0b1 << 24) + self.parse_op_ldr(operand)
 
     def parse_op_stro(self, operand):
         return self.parse_op_ldro(operand)
@@ -1617,19 +1715,19 @@ class InstructionParser(object):
         if '-' in operand[1]:
             regs = operand[1].split('-')
             operand[1] = regs[0]
-        operand = [operand[1], operand[0]]    
-        return (0b01<<23) + self.parse_op_str(operand)
+        operand = [operand[1], operand[0]]
+        return (0b01 << 23) + self.parse_op_str(operand)
 
     def parse_op_push(self, operand):
         if len(operand) != 1:
             raise ValueError('instruction operand length not equal to 1')
-        
-        operand.append('[r31]') # append [sp]
+
+        operand.append('[r31]')  # append [sp]
         if '-' in operand[0]:
             operand[0] = operand[0][:operand[0].find('-')]
-            return (0b1<<24) + (0b01<<23) + self.parse_op_str(operand)
+            return (0b1 << 24) + (0b01 << 23) + self.parse_op_str(operand)
         else:
-            return (0b1<<24) + self.parse_op_str(operand)
+            return (0b1 << 24) + self.parse_op_str(operand)
 
     def parse_op_setr(self, operand):
         if len(operand) != 3:
@@ -1640,21 +1738,21 @@ class InstructionParser(object):
         self.imm_validate(int(mod[1:]), 5, self.IMM_UNSIGNED)
         src = operand[2]
         self.imm_validate(int(src[1:]), 16, self.IMM_UNSIGNED)
-        
+
         imm = 0
-        imm += (int(dst[1:])<<16)
-        imm += (int(mod[1:])<<21)
+        imm += (int(dst[1:]) << 16)
+        imm += (int(mod[1:]) << 21)
         imm += (int(src[1:]))
 
         return imm
 
     def parse_op_setrh(self, operand):
-        mod = '#3' # 0b00011, only apply to 16 MSB, preserve the 16 LSB
+        mod = '#3'  # 0b00011, only apply to 16 MSB, preserve the 16 LSB
         operand.insert(1, mod)
         return self.parse_op_setr(operand)
 
     def parse_op_setrl(self, operand):
-        mod = '#12' # 0b01100, only apply to 16 LSB, preserve the 16 MSB
+        mod = '#12'  # 0b01100, only apply to 16 LSB, preserve the 16 MSB
         operand.insert(1, mod)
         return self.parse_op_setr(operand)
 
@@ -1667,21 +1765,21 @@ class InstructionParser(object):
         self.imm_validate(int(mod[1:]), 1, self.IMM_UNSIGNED)
         src = operand[2]
         self.imm_validate(int(src[1:]), 16, self.IMM_UNSIGNED)
-        
+
         imm = 0
-        imm += (int(dst[1:])<<16)
-        imm += (int(mod[1:])<<24)
+        imm += (int(dst[1:]) << 16)
+        imm += (int(mod[1:]) << 24)
         imm += (int(src[1:]))
 
         return imm
 
     def parse_op_setih(self, operand):
-        mod = '#1' # only apply to 16 MSB, preserve the 16 LSB
+        mod = '#1'  # only apply to 16 MSB, preserve the 16 LSB
         operand.insert(1, mod)
         return self.parse_op_seti(operand)
 
     def parse_op_setil(self, operand):
-        mod = '#0' # only apply to 16 LSB, preserve the 16 MSB
+        mod = '#0'  # only apply to 16 LSB, preserve the 16 MSB
         operand.insert(1, mod)
         return self.parse_op_seti(operand)
 
@@ -1695,20 +1793,20 @@ class InstructionParser(object):
         src = operand[2]
 
         imm = 0
-        imm += (int(mod[1:])<<21)
-        imm += (int(dst[1:])<<16)
+        imm += (int(mod[1:]) << 21)
+        imm += (int(dst[1:]) << 16)
 
         if '#' in src:
             self.imm_validate(int(src[1:]), 16, self.IMM_BOTH)
-            imm += (0b1 << 24) 
+            imm += (0b1 << 24)
             if '-' in src:
                 imm += (0x10000 - int(src[2:]))
             else:
                 imm += int(src[1:])
             if int(src[1:]) > 0x7FFF:
-                imm += (0b1<<25)
+                imm += (0b1 << 25)
         else:
-            imm += (int(src[1:])<<8)
+            imm += (int(src[1:]) << 8)
 
         return imm
 
@@ -1726,16 +1824,16 @@ class InstructionParser(object):
         src = operand[1]
 
         imm = 0
-        imm += (int(dst[1:])<<16)
+        imm += (int(dst[1:]) << 16)
 
-        imm += (0b1<<25) # bit 25 reserved 1 for AND and ORR
+        imm += (0b1 << 25)  # bit 25 reserved 1 for AND and ORR
 
         if '#' in src:
             self.imm_validate(int(src[1:]), 16, self.IMM_UNSIGNED)
-            imm += (0b1 << 24) 
+            imm += (0b1 << 24)
             imm += int(src[1:])
         else:
-            imm += (int(src[1:])<<8)
+            imm += (int(src[1:]) << 8)
 
         return imm
 
@@ -1747,14 +1845,14 @@ class InstructionParser(object):
         src = operand[1]
 
         imm = 0
-        imm += (int(dst[1:])<<16)
+        imm += (int(dst[1:]) << 16)
 
         if '#' in src:
             self.imm_validate(int(src[1:]), 16, self.IMM_UNSIGNED)
             imm += (0b1 << 24)
             imm += int(src[1:])
         else:
-            imm += (int(src[1:])<<8)
+            imm += (int(src[1:]) << 8)
 
         return imm
 
@@ -1772,19 +1870,19 @@ class InstructionParser(object):
         src = operand[1]
 
         imm = 0
-        imm += (int(dst[1:])<<16)
+        imm += (int(dst[1:]) << 16)
 
         if '#' in src:
             self.imm_validate(int(src[1:]), 5, self.IMM_UNSIGNED)
-            imm += (0b1 << 24) 
+            imm += (0b1 << 24)
             imm += int(src[1:])
         else:
-            imm += (int(src[1:])<<8)
+            imm += (int(src[1:]) << 8)
 
         return imm
 
     def parse_op_asr(self, operand):
-        return (0b1<<25) + self.parse_op_lsr(operand)
+        return (0b1 << 25) + self.parse_op_lsr(operand)
 
     def parse_op_lsl(self, operand):
         return self.parse_op_lsr(operand)
@@ -1800,7 +1898,7 @@ class InstructionParser(object):
         imm = 0
         imm += (int(dst[1:])<<16)
 
-        imm += (int(src[1:])<<8)
+        imm += (int(src[1:]) << 8)
 
         return imm
 
@@ -1812,20 +1910,20 @@ class InstructionParser(object):
         src = operand[1]
 
         imm = 0
-        imm += (int(dst[1:])<<16)
+        imm += (int(dst[1:]) << 16)
 
         if '#' in src:
             self.imm_validate(int(src[1:]), 16, self.IMM_BOTH)
-            imm += (0b1 << 24) 
+            imm += (0b1 << 24)
             if '-' in src:
                 imm += (0x10000 - int(src[2:]))
             else:
                 imm += int(src[1:])
             if int(src[1:]) > 0x7FFF:
-                imm += (0b1<<25)                
+                imm += (0b1 << 25)
         else:
             imm += (0b1 << 25)
-            imm += (int(src[1:])<<8)
+            imm += (int(src[1:]) << 8)
 
         return imm
 
@@ -1839,7 +1937,7 @@ class InstructionParser(object):
         imm = 0
         imm += (cond << 22)
 
-        imm += (int(dst[1:])<<16)
+        imm += (int(dst[1:]) << 16)
 
         if '#' in src:
             self.imm_validate(int(src[1:]), 16, self.IMM_BOTH)
@@ -1849,20 +1947,20 @@ class InstructionParser(object):
             else:
                 imm += int(src[1:])
             if int(src[1:]) > 0x7FFF:
-                imm += (0b1<<25)
+                imm += (0b1 << 25)
         else:
             imm += (0b1 << 25)
-            imm += (int(src[1:])<<8)
+            imm += (int(src[1:]) << 8)
 
         return imm
 
     def parse_op(self, op_code, operand, inst_label_list, index):
         """
-        process the op code and operand 
+        process the op code and operand
         """
         code = 0
         if op_code in self.instruction_dict:
-            code = (self.instruction_dict[op_code]<<26)
+            code = (self.instruction_dict[op_code] << 26)
 
         if op_code == 'jump':
             code += self.parse_op_jump(operand)
@@ -1887,8 +1985,8 @@ class InstructionParser(object):
             if op_code == 'bge':
                 cond = 0b101
 
-            if op_code == 'bl': # branch with LR updated
-                code += (0b1<<22)
+            if op_code == 'bl':  # branch with LR updated
+                code += (0b1 << 22)
             code += self.parse_op_b(operand, cond, inst_label_list, index)
         if op_code == 'ldro':
             code += self.parse_op_ldro(operand)
@@ -1941,54 +2039,54 @@ class InstructionParser(object):
         if op_code == 'add' or op_code == 'addm' or op_code == 'addl':
             mod = ''
             if op_code == 'addl':
-                mod = '#2' # 0b010, only apply to 16 LSB
+                mod = '#2'  # 0b010, only apply to 16 LSB
             if op_code == 'addm':
-                mod = '#1' # 0b001, only apply to 16 MSB
+                mod = '#1'  # 0b001, only apply to 16 MSB
             if op_code == 'add':
-                mod = '#0' # 0b000, immediate with signed extended & apply to the word  
-            operand.insert(0, mod)  
+                mod = '#0'  # 0b000, immediate with signed extended & apply to the word
+            operand.insert(0, mod)
             code += self.parse_op_add(operand)
         if op_code == 'sub' or op_code == 'subm' or op_code == 'subl':
             mod = ''
             if op_code == 'subl':
-                mod = '#6' # 0b110, only apply to 16 LSB
+                mod = '#6'  # 0b110, only apply to 16 LSB
             if op_code == 'subm':
-                mod = '#5' # 0b101, only apply to 16 MSB
+                mod = '#5'  # 0b101, only apply to 16 MSB
             if op_code == 'sub':
-                mod = '#4' # 0b100, immediate with signed extended & apply to the word      
-            operand.insert(0, mod)  
+                mod = '#4'  # 0b100, immediate with signed extended & apply to the word
+            operand.insert(0, mod)
             code += self.parse_op_sub(operand)
         if op_code == 'and' or op_code == 'andm' or op_code == 'andl':
             if op_code == 'andl':
-                code += (0b10<<21) # only apply to 16 LSB
+                code += (0b10 << 21)  # only apply to 16 LSB
             if op_code == 'andm':
-                code += (0b01<<21) # only apply to 16 MSB
+                code += (0b01 << 21)  # only apply to 16 MSB
             if op_code == 'and':
-                code += (0b00<<21) # immediate with 0 extended & apply to the word     
+                code += (0b00 << 21)  # immediate with 0 extended & apply to the word
             code += self.parse_op_and(operand)
         if op_code == 'not' or op_code == 'notm' or op_code == 'notl':
             if op_code == 'notl':
-                code += (0b10<<21) # only apply to 16 LSB
+                code += (0b10 << 21)  # only apply to 16 LSB
             if op_code == 'notm':
-                code += (0b01<<21) # only apply to 16 MSB
+                code += (0b01 << 21)  # only apply to 16 MSB
             if op_code == 'not':
-                code += (0b00<<21) # immediate with 0 extended & apply to the word
+                code += (0b00 << 21)  # immediate with 0 extended & apply to the word
             code += self.parse_op_not(operand)
         if op_code == 'orr' or op_code == 'orrm' or op_code == 'orrl':
             if op_code == 'orrl':
-                code += (0b10<<21) # only apply to 16 LSB
+                code += (0b10 << 21)  # only apply to 16 LSB
             if op_code == 'orrm':
-                code += (0b01<<21) # only apply to 16 MSB
+                code += (0b01 << 21)  # only apply to 16 MSB
             if op_code == 'orr':
-                code += (0b00<<21) # immediate with 0 extended & apply to the word     
+                code += (0b00 << 21)  # immediate with 0 extended & apply to the word
             code += self.parse_op_orr(operand)
         if op_code == 'xor' or op_code == 'xorm' or op_code == 'xorl':
             if op_code == 'xorl':
-                code += (0b10<<21) # only apply to 16 LSB
+                code += (0b10 << 21)  # only apply to 16 LSB
             if op_code == 'xorm':
-                code += (0b01<<21) # only apply to 16 MSB
+                code += (0b01 << 21)  # only apply to 16 MSB
             if op_code == 'xor':
-                code += (0b00<<21) # immediate with 0 extended & apply to the word
+                code += (0b00 << 21)  # immediate with 0 extended & apply to the word
             code += self.parse_op_xor(operand)
         if op_code == 'lsl':
             code += self.parse_op_lsl(operand)
@@ -2016,11 +2114,11 @@ class InstructionParser(object):
             code += self.parse_op_mul(operand)
         if op_code == 'mov' or op_code == 'movb' or op_code == 'movh' or op_code == 'movl':
             if op_code == 'movb':
-                code += (0b10<<21) # only apply to 8 LSB
+                code += (0b10 << 21)  # only apply to 8 LSB
             if op_code == 'movh':
-                code += (0b11<<21) # only apply to 16 MSB
+                code += (0b11 << 21)  # only apply to 16 MSB
             if op_code == 'movl':
-                code += (0b01<<21) # only apply to 16 LSB
+                code += (0b01 << 21)  # only apply to 16 LSB
             code += self.parse_op_mov(operand)
         if op_code == 'cmov' or op_code == 'cmoveq' or op_code == 'cmovgt' or op_code == 'cmovlt' or op_code == 'cmovne' or op_code == 'cmovle' or op_code == 'cmovge':
             cond = 0b110
@@ -2042,15 +2140,15 @@ class InstructionParser(object):
 
     def parse_instruction(self, inst, inst_label_list, index):
         """
-        convert to a 32 bit machine code 
+        convert to a 32 bit machine code
         """
         operand = []
-        inst = inst.replace('\t',' ')  
+        inst = inst.replace('\t', ' ')
         index_op = inst.find(' ')
         op_code = inst[:index_op]
         tmp_operand = inst[index_op:]
         items = tmp_operand.split(',')
-        
+
         if op_code not in self.instruction_dict:
             if self.inst_extension:
                 if op_code not in self.inst_extension.instruction_dict:
@@ -2072,11 +2170,11 @@ class InstructionParser(object):
                 each = 'r28'
             if each.startswith('#'):
                 if '0x' in each:
-                    tmp = int(each[1:],16)
-                    each = '#'+str(tmp)
+                    tmp = int(each[1:], 16)
+                    each = '#' + str(tmp)
                 if '0b' in each:
-                    tmp = int(each[1:],2)
-                    each = '#'+str(tmp)
+                    tmp = int(each[1:], 2)
+                    each = '#' + str(tmp)
             operand.append(each)
 
         try:
@@ -2101,11 +2199,11 @@ class InstructionParser(object):
         strip out the unrelated content
         """
         index_start = content.find('/*')
-        while index_start>=0:
+        while index_start >= 0:
             index_end = content.find('*/')
             if index_end < 0:
                 raise ValueError('no matched */ found')
-            replace_str = content[index_start:index_end+2]
+            replace_str = content[index_start:index_end + 2]
             content = content.replace(replace_str, '')
 
             index_start = content.find('/*')
@@ -2117,7 +2215,7 @@ class InstructionParser(object):
             tmp_line = line.lstrip()
 
             if '//' in tmp_line:
-                tmp_line = tmp_line[:tmp_line.find('//')]+'\n'
+                tmp_line = tmp_line[:tmp_line.find('//')] + '\n'
 
             if tmp_line.startswith('.'):
                 tmp_content += ''
@@ -2130,17 +2228,17 @@ class InstructionParser(object):
 
     def merge_instruction(self, inst_list):
         """
-        merge the consecutive instructions into a single one if applicable  
-        """    
+        merge the consecutive instructions into a single one if applicable
+        """
         instruction_list = InstFuncLabel()
 
         index = 0
         while index < inst_list.length():
             inst = inst_list.list_inst[index]
             label = inst_list.list_label[index]
-            
-            #operand = []
-            inst = inst.replace('\t',' ')  
+
+            # operand = []
+            inst = inst.replace('\t', ' ')
             index_op = inst.find(' ')
             if index_op < 0:
                 op_code = inst
@@ -2149,13 +2247,13 @@ class InstructionParser(object):
                 op_code = inst[:index_op]
                 operand = inst[index_op:]
 
-            tmp_index = index 
-            if self.inst_extension:  
+            tmp_index = index
+            if self.inst_extension:
                 if op_code in self.inst_extension.instruction_dict_merge:
-                    tmp_index = index+1
+                    tmp_index = index + 1
                     while tmp_index < inst_list.length():
                         tmp_inst = inst_list.list_inst[tmp_index]
-                        tmp_inst = tmp_inst.replace('\t',' ')  
+                        tmp_inst = tmp_inst.replace('\t', ' ')
                         tmp_index_op = tmp_inst.find(' ')
                         tmp_op_code = tmp_inst[:tmp_index_op]
                         tmp_operand = tmp_inst[tmp_index_op:]
@@ -2178,10 +2276,10 @@ class InstructionParser(object):
     def validate_instruction(self, inst_list):
         label_list = inst_list.list_label
         # print(label_list)
-        stripped_list = list(filter(None,label_list))
+        stripped_list = list(filter(None, label_list))
         # print(stripped_list)
         no_duplicated_list = list(set(stripped_list))
-        # print(no_duplicated_list)   
+        # print(no_duplicated_list)
 
         if len(stripped_list) != len(no_duplicated_list):
             for each in no_duplicated_list:
@@ -2213,7 +2311,7 @@ class InstructionParser(object):
             if tmp_line.endswith(':'):
                 label = tmp_line[0:-1]
                 if ' ' in label:
-                    raise ValueError('invalid label with space in "'+label+'"')
+                    raise ValueError('invalid label with space in "' + label + '"')
             else:
                 # change to lower case
                 tmp_line = tmp_line.lower()
@@ -2233,20 +2331,20 @@ class InstructionParser(object):
             inst = instruction_list.list_inst[i]
             label = instruction_list.list_label[i]
             if label.startswith('__'):
-                tmp_content += '                 // '+label+':\n'
+                tmp_content += '                 // ' + label + ':\n'
             elif label != '':
-                    tmp_content += ('};\n\n')
-                    tmp_content += ('const uint32_t '+label+'[] = {\n')
-                    # save into the .h file
-                    if h_file:
-                        h_file.write('extern const uint32_t '+label+'[];\n')
+                tmp_content += ('};\n\n')
+                tmp_content += ('const uint32_t ' + label + '[] = {\n')
+                # save into the .h file
+                if h_file:
+                    h_file.write('extern const uint32_t ' + label + '[];\n')
 
             code_str = self.parse_instruction(inst, instruction_list, i)
-            tmp_content += ('    '+code_str+',' + '  //     ' + inst+'\n')
+            tmp_content += ('    ' + code_str + ',' + '  //     ' + inst + '\n')
             # save into the hex file
             if hex_file:
-                hex_file.write(code_str[2:]+'\n')
-            
+                hex_file.write(code_str[2:] + '\n')
+
         tmp_content += ('};\n\n')
 
         tmp_content = tmp_content.replace('};', '', 1)
@@ -2273,7 +2371,9 @@ def parse_args():
     return args
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = {}
+    args["i"] = "luna_repeat.s"
+    args["o"] = "luna_repeat"
     input = args['i']
     formats = {'hex':0, 'h':0, 'c':0}
     h_file = None
@@ -2300,11 +2400,11 @@ if __name__ == "__main__":
         formats['c'] = 1
 
     if formats['h']:
-        h_file = open(output+'.h', 'w')
+        h_file = open(output + '.h', 'w')
     if formats['c']:
-        c_file = open(output+'.c', 'w')
+        c_file = open(output + '.c', 'w')
     if formats['hex']:
-        hex_file = open(output+'.hex', 'w')
+        hex_file = open(output + '.hex', 'w')
 
     # add a prefix to head file
     if formats['h']:
@@ -2320,10 +2420,10 @@ if __name__ == "__main__":
     if formats['hex']:
         for each in prefix_hex:
             if each.startswith('0x'):
-                hex_file.write(each[2:]+'\n')
+                hex_file.write(each[2:] + '\n')
             else:
                 each = each.lower()
-                hex_file.write(inst_parser.parse_instruction(each, [], 0)[2:]+'\n')
+                hex_file.write(inst_parser.parse_instruction(each, [], 0)[2:] + '\n')
 
     if '*.s' in args['i']:
         inputs = glob.glob('*.s')
@@ -2351,19 +2451,19 @@ if __name__ == "__main__":
     if formats['hex']:
         for each in suffix_hex:
             if each.startswith('0x'):
-                hex_file.write(each[2:]+'\n')
+                hex_file.write(each[2:] + '\n')
             else:
                 each = each.lower()
-                hex_file.write(inst_parser.parse_instruction(each, [], 0)[2:]+'\n')
+                hex_file.write(inst_parser.parse_instruction(each, [], 0)[2:] + '\n')
 
     if formats['hex']:
         hex_file.close()
-        print('--- '+output+'.hex generated')
+        print('--- ' + output + '.hex generated')
     if formats['c']:
         c_file.close()
-        print('--- '+output+'.c generated')
+        print('--- ' + output + '.c generated')
     if formats['h']:
         h_file.close()
-        print('--- '+output+'.h generated')
+        print('--- ' + output + '.h generated')
 
 
