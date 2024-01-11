@@ -319,8 +319,8 @@ class InstructionExtension(object):
         # master0 select1
         # ares master, select1, {[or|and], [sel_en|sel_hold], en_from_sour(x), sel_en_line(x), elf[xxxx], efcs[xxxxxxxx]}
         {
-            'elc': {'bit': 19, 'val': operand_ares_m0s1_elc},
-            'hes': {'bit': 18, 'val': operand_ares_m0s1_hes},
+            'hes': {'bit': 19, 'val': operand_ares_m0s1_hes},
+            'elc': {'bit': 18, 'val': operand_ares_m0s1_elc},
             'efos': {'bit': 16, 'val': operand_ares_m0s1_efos},
             'els': {'bit': 14, 'val': operand_ares_m0s1_els},
             'elf': {'bit': 8, 'val': 4},
@@ -328,6 +328,7 @@ class InstructionExtension(object):
         },
 
         # master0 select2
+        # ares master, select2, {[sel_port0 | sel_port1], [sel_low8 | sel_high8], mos[xxxx], eac[xxxx], cas[xxxxxxxx]}
         # ares master, select2, {[sel_port0 | sel_port1], [sel_low8 | sel_high8], master_over_sel(x), eac[xxxx], cas[xxxxxxxx]}
         {
             'aps': {'bit': 19, 'val': operand_ares_m0s2_aps},
