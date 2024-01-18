@@ -76,19 +76,21 @@ class InstructionExtension(object):
         # parameters in op with '='
         {
             'mode': {'bit': 25, 'val': operand_memc_vals},
-            'addr': {'bit': 24, 'val': operand_memc_vals},
-            'one-enable': {'bit': 23, 'val': operand_memc_vals},
-            'dynamic': {'bit': 22, 'val': operand_memc_vals},
-            'access': {'bit': 21, 'val': operand_memc_vals},
+            # 'addr': {'bit': 24, 'val': operand_memc_vals},
+            'one-enable': {'bit': 11, 'val': operand_memc_vals},
+            'dynamic': {'bit': 21, 'val': operand_memc_vals},
+            'access': {'bit': 20, 'val': operand_memc_vals},
+            'grp7': {'bit': 19, 'val': operand_memc_vals},
+            'grp6': {'bit': 18, 'val': operand_memc_vals},
             'grp5': {'bit': 17, 'val': operand_memc_vals},
             'grp4': {'bit': 16, 'val': operand_memc_vals},
             'grp3': {'bit': 15, 'val': operand_memc_vals},
             'grp2': {'bit': 14, 'val': operand_memc_vals},
             'grp1': {'bit': 13, 'val': operand_memc_vals},
             'grp0': {'bit': 12, 'val': operand_memc_vals},
-            'grp': {'bit': 8, 'val': operand_memc_vals},
+            # 'grp': {'bit': 8, 'val': operand_memc_vals},
 
-            'bsel': {'bit': 0, 'val': operand_memc_vals},
+            # 'bsel': {'bit': 0, 'val': operand_memc_vals},
         }
     ]
 
@@ -299,12 +301,12 @@ class InstructionExtension(object):
         "sel_high8": 1,
     }
 
-    operand_ares_m0s2_mos = r"master_over_sel(\d+)"
+    operand_ares_m0s2_mos = r"sel_master_over(\d+)"
 
     ########################## Master and selection3
     operand_ares_m0s3_rcls = r"sel_counter_line(\d+)"
 
-    operand_ares_m0s3_dsc = r"data_source(\d+)"
+    operand_ares_m0s3_dsc = r"sel_data_sour(\d+)"
 
     operand_ares_params = [
         # master0 select0
@@ -329,7 +331,7 @@ class InstructionExtension(object):
 
         # master0 select2
         # ares master, select2, {[sel_port0 | sel_port1], [sel_low8 | sel_high8], mos[xxxx], eac[xxxx], cas[xxxxxxxx]}
-        # ares master, select2, {[sel_port0 | sel_port1], [sel_low8 | sel_high8], master_over_sel(x), eac[xxxx], cas[xxxxxxxx]}
+        # ares master, select2, {[sel_port0 | sel_port1], [sel_low8 | sel_high8], sel_master_over(x), eac[xxxx], cas[xxxxxxxx]}
         {
             'aps': {'bit': 19, 'val': operand_ares_m0s2_aps},
             'hlcs': {'bit': 18, 'val': operand_ares_m0s2_hlcs},
@@ -339,7 +341,7 @@ class InstructionExtension(object):
         },
 
         # master0 select3
-        # ares master, select3, {rcils[xxxx], sel_counter_line(x), data_source(x)}
+        # ares master, select3, {rcils[xxxx], sel_counter_line(x), sel_data_sour(x)}
         {
             'rcils': {'bit': 16, 'val': 4},
             'rcls': {'bit': 14, 'val': operand_ares_m0s3_rcls},
@@ -672,64 +674,40 @@ class InstructionExtension(object):
     operand_rst_vals = {
         'clock': (0b00),
         'reset': (0b01),
-        'counter': (0b11),
-
-        'stop': (0b00),
-        'start': (0b01),
-        'refresh': (0b11),
-
     }
 
     operand_rst_params = [
         # parameters in op without '='
         {
             'master0': {'bit': 0, 'val': 1},
-            'master1': {'bit': 1, 'val': 1},
-            'slave0': {'bit': 2, 'val': 1},
-            'slave1': {'bit': 3, 'val': 1},
-            'iord0': {'bit': 4, 'val': 1},
-            'iord1': {'bit': 5, 'val': 1},
-            'iowr': {'bit': 6, 'val': 1},
-            'psram': {'bit': 7, 'val': 1},
-            'topctl': {'bit': 8, 'val': 1},
-            'cgc': {'bit': 9, 'val': 1},
-            'ahbins': {'bit': 10, 'val': 1},
-            'ahbreg': {'bit': 11, 'val': 1},
-            'ahbmux': {'bit': 12, 'val': 1},
-            'pecore': {'bit': 13, 'val': 1},
-            'router': {'bit': 14, 'val': 1},
-            'regtab0': {'bit': 16, 'val': 1},
-            'regtab1': {'bit': 17, 'val': 1},
-            'regtab2': {'bit': 18, 'val': 1},
-            'regtab3': {'bit': 19, 'val': 1},
-
-            'stop': {'bit': 0, 'val': 0},
-            'start': {'bit': 0, 'val': 1},
-            'refresh': {'bit': 0, 'val': 3},
-
+            'slave0': {'bit': 1, 'val': 1},
+            'iord0': {'bit': 2, 'val': 1},
+            'iord1': {'bit': 3, 'val': 1},
+            'iowr': {'bit': 4, 'val': 1},
+            'ioahb': {'bit': 5, 'val': 1},
+            'topctl': {'bit': 6, 'val': 1},
+            'cgc': {'bit': 7, 'val': 1},
+            'ahbins': {'bit': 8, 'val': 1},
+            'ahbreg': {'bit': 9, 'val': 1},
+            'ahbmux': {'bit': 10, 'val': 1},
+            'pecore': {'bit': 11, 'val': 1},
+            'router': {'bit': 12, 'val': 1},
+            'regtab0': {'bit': 13, 'val': 1},
+            'regtab1': {'bit': 14, 'val': 1},
+            'regtab2': {'bit': 15, 'val': 1},
+            'regtab3': {'bit': 16, 'val': 1},
         },
         # parameters in op with '='
         {
             'sel': {'bit': 22, 'val': operand_rst_vals},
 
             'master0': {'bit': 0, 'val': operand_rst_vals},
-            'master1': {'bit': 1, 'val': operand_rst_vals},
-            'slave0': {'bit': 2, 'val': operand_rst_vals},
-            'slave1': {'bit': 3, 'val': operand_rst_vals},
-            'iord0': {'bit': 4, 'val': operand_rst_vals},
-            'iord1': {'bit': 5, 'val': operand_rst_vals},
-            'iowr': {'bit': 6, 'val': operand_rst_vals},
-            'psram': {'bit': 7, 'val': operand_rst_vals},
-            'pe0': {'bit': 8, 'val': operand_rst_vals},
-            'pe1': {'bit': 9, 'val': operand_rst_vals},
-            'pe2': {'bit': 10, 'val': operand_rst_vals},
-            'pe3': {'bit': 11, 'val': operand_rst_vals},
-            'pe4': {'bit': 12, 'val': operand_rst_vals},
-            'pe5': {'bit': 13, 'val': operand_rst_vals},
-            'pe6': {'bit': 14, 'val': operand_rst_vals},
-            'pe7': {'bit': 15, 'val': operand_rst_vals},
-
-            'lcnt': {'bit': 0, 'val': operand_rst_vals},
+            'slave0': {'bit': 1, 'val': operand_rst_vals},
+            'iord0': {'bit': 2, 'val': operand_rst_vals},
+            'iord1': {'bit': 3, 'val': operand_rst_vals},
+            'iowr': {'bit': 4, 'val': operand_rst_vals},
+            'ioahb': {'bit': 5, 'val': operand_rst_vals},
+            'pe': {'bit': 6, 'val': operand_rst_vals},
         }
     ]
 
