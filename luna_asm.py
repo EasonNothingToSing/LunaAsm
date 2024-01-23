@@ -52,6 +52,7 @@ class InstructionExtension(object):
         'smrk': 0b101010,
         'cmrk': 0b101011,
         'macro': 0b011010,
+        'seti': 0b010111,
     }
     instruction_dict_merge = {
         # instructions below may have consecutive ones which require merging before parsing
@@ -747,6 +748,25 @@ class InstructionExtension(object):
         }
     ]
 
+    operand_seti_mode_paras = {
+        "mem_mode": 0,
+        "reg_mode": 1,
+    }
+
+    operand_seti_reg = r"r(\d+)"
+
+    operand_seti_params = [
+        {
+            'reg': {'bit': 17, 'val': operand_seti_reg},
+            'grp': {'bit': 14, 'val': None},
+            'bank': {'bit': 12, 'val': None},
+            'addr': {'bit': 0, 'val': None},
+        },
+        {
+            'reg': {'bit': 17, 'val': operand_seti_reg},
+        },
+    ]
+
     def __init__(self):
         print("extension module - [InstructionExtension] loaded")
 
@@ -910,6 +930,8 @@ class InstructionExtension(object):
             code += self.parse_op_cmrk(operand)
         if op_code == 'macro':
             code += self.parse_op_macro(operand)
+        if op_code == 'seti':
+            code += self.parse_op_seti(operand)
 
         return code
 
@@ -1294,6 +1316,62 @@ class InstructionExtension(object):
 
         return imm
 
+    def parse_op_seti(self, operand):
+        if len(operand) < 1:
+            raise ValueError('instruction operand length error')
+        imm = 0
+
+        mode = operand[0]
+        operand = operand[1:]
+
+        if '=' in mode:
+            params = mode.split('=')
+            if params[0] != "mode":
+                raise ValueError('invalid op: ' + mode)
+
+            if len(params) != 2:
+                raise ValueError('invalid op: ' + mode)
+
+            if params[1].isdecimal():
+                if int(params[1]) == 0:
+                    counter = 0
+                elif int(params[1]) == 1:
+                    counter = 1
+                else:
+                    raise ValueError('invalid op: ' + mode)
+            else:
+                raise ValueError('invalid op: ' + mode)
+        else:
+            if mode in self.operand_seti_mode_paras.keys():
+                counter = int(self.operand_seti_mode_paras[mode])
+            else:
+                raise ValueError('invalid op: ' + mode)
+
+        for op in operand:
+            if '=' in op:
+                params = op.split('=')
+                if len(params) == 2:
+                    if isinstance(self.operand_seti_params[counter][params[0]]['val'], str):
+                        val_list = re.findall(self.operand_seti_params[counter][params[0]]['val'], params[1])
+                        if val_list:
+                            imm |= (int(val_list[0]) << self.operand_seti_params[counter][params[0]]['bit'])
+                            continue
+                        raise ValueError('invalid op')
+                    elif self.operand_seti_params[counter][params[0]]['val'] is None:
+                        if '0x' in params[1]:
+                            value = int(params[1], 16)
+                        else:
+                            value = int(params[1])
+                        imm |= value << self.operand_seti_params[counter][params[0]]['bit']
+                        continue
+                else:
+                    raise ValueError('invalid op')
+            else:
+                raise ValueError('invalid op')
+
+
+        return imm
+
 
 class InstFuncLabel:
     def __init__(self):
@@ -1349,7 +1427,6 @@ class InstructionParser(object):
         'setr': 0b010000,
         'setrh': 0b010000,
         'setrl': 0b010000,
-        'seti': 0b010111,
         'setih': 0b010111,
         'setil': 0b010111,
         'gopr': 0b010001,
@@ -1735,23 +1812,6 @@ class InstructionParser(object):
         operand.insert(1, mod)
         return self.parse_op_setr(operand)
 
-    def parse_op_seti(self, operand):
-        if len(operand) != 3:
-            raise ValueError('instruction operands not equal to 3')
-
-        dst = operand[0]
-        mod = operand[1]
-        self.imm_validate(int(mod[1:]), 1, self.IMM_UNSIGNED)
-        src = operand[2]
-        self.imm_validate(int(src[1:]), 16, self.IMM_UNSIGNED)
-
-        imm = 0
-        imm += (int(dst[1:]) << 16)
-        imm += (int(mod[1:]) << 24)
-        imm += (int(src[1:]))
-
-        return imm
-
     def parse_op_setih(self, operand):
         mod = '#1'  # only apply to 16 MSB, preserve the 16 LSB
         operand.insert(1, mod)
@@ -2007,8 +2067,6 @@ class InstructionParser(object):
             code += self.parse_op_setrh(operand)
         if op_code == 'setrl':
             code += self.parse_op_setrl(operand)
-        if op_code == 'seti':
-            code += self.parse_op_seti(operand)
         if op_code == 'setih':
             code += self.parse_op_setih(operand)
         if op_code == 'setil':
