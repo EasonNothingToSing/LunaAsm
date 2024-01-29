@@ -6,6 +6,8 @@ import io
 import re
 import glob
 
+debug_flag = False
+
 # user defined content for the prefix and suffix in hex file
 prefix_hex = [
     #    '0x00000000',
@@ -2396,12 +2398,16 @@ def parse_args():
     args = vars(arg_parser.parse_args())
     return args
 
+
 if __name__ == "__main__":
-    args = {}
-    args["i"] = "luna_repeat.s"
-    args["o"] = "luna_repeat"
+    if debug_flag:
+        args = {}
+        args["i"] = "luna_repeat.s"
+        args["o"] = "luna_repeat"
+    else:
+        args = parse_args()
     input = args['i']
-    formats = {'hex':0, 'h':0, 'c':0}
+    formats = {'hex': 0, 'h': 0, 'c': 0}
     h_file = None
     c_file = None
     hex_file = None
