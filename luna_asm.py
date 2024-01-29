@@ -42,8 +42,6 @@ class InstructionExtension(object):
         'memc': 0b100001,
         'mnts': 0b100010,
         'dstm0': 0b100101,
-        'dstm1': 0b100111,
-        'dstm2': 0b101000,
         'ares': 0b100100,
         'iow': 0b101001,
         'dprc': 0b100110,
@@ -57,8 +55,6 @@ class InstructionExtension(object):
     instruction_dict_merge = {
         # instructions below may have consecutive ones which require merging before parsing
         'dstm0': 0b100101,
-        'dstm1': 0b100111,
-        'dstm2': 0b101000,
         'ares': 0b100100,
     }
 
@@ -308,6 +304,8 @@ class InstructionExtension(object):
     operand_ares_m0s3_rcls = r"sel_counter_line(\d+)"
 
     operand_ares_m0s3_dsc = r"sel_data_sour(\d+)"
+    operand_ares_m0s3_dps = r"sel_dp(\d+)"
+    operand_ares_m0s3_dcl = r"dcl(\d+)"
 
     operand_ares_params = [
         # master0 select0
@@ -342,11 +340,13 @@ class InstructionExtension(object):
         },
 
         # master0 select3
-        # ares master, select3, {rcils[xxxx], sel_counter_line(x), sel_data_sour(x)}
+        # ares master, select3, {rcils[xxxx], sel_counter_line(x), sel_data_sour(x), sel_dp(x), dcl(x)}
         {
             'rcils': {'bit': 16, 'val': 4},
             'rcls': {'bit': 14, 'val': operand_ares_m0s3_rcls},
             'dsc': {'bit': 8, 'val': operand_ares_m0s3_dsc},
+            'dps': {'bit': 7, 'val': operand_ares_m0s3_dps},
+            'dcl': {'bit': 0, 'val': operand_ares_m0s3_dcl},
         }
     ]
 
@@ -835,17 +835,8 @@ class InstructionExtension(object):
         if op_code == 'mnts':
             params_dict = self.operand_mnts_params[0]
 
-        if op_code == 'mntx':
-            params_dict = self.operand_mntx_params[0]
-
         if op_code == 'dstm0':
             params_dict = self.operand_dstm0_params[0]
-
-        if op_code == 'dstm1':
-            params_dict = self.operand_dstm1_params[0]
-
-        if op_code == 'dstm2':
-            params_dict = self.operand_dstm2_params[0]
 
         if op_code == 'ares':
             count = 0
@@ -910,10 +901,6 @@ class InstructionExtension(object):
             code += self.parse_op_mnts(operand)
         if op_code == 'dstm0':
             code += self.parse_op_dstm0(operand)
-        if op_code == 'dstm1':
-            code += self.parse_op_dstm1(operand)
-        if op_code == 'dstm2':
-            code += self.parse_op_dstm2(operand)
         if op_code == 'ares':
             code += self.parse_op_ares(operand)
         if op_code == 'iow':
@@ -1337,6 +1324,7 @@ class InstructionExtension(object):
                     counter = 0
                 elif int(params[1]) == 1:
                     counter = 1
+                    imm |= 1 << 22
                 else:
                     raise ValueError('invalid op: ' + mode)
             else:
@@ -1344,6 +1332,7 @@ class InstructionExtension(object):
         else:
             if mode in self.operand_seti_mode_paras.keys():
                 counter = int(self.operand_seti_mode_paras[mode])
+                imm |= int(self.operand_seti_mode_paras[mode]) << 22
             else:
                 raise ValueError('invalid op: ' + mode)
 
@@ -1974,7 +1963,7 @@ class InstructionParser(object):
         src = operand[1]
 
         imm = 0
-        imm += (cond << 22)
+        imm += (cond << 21)
 
         imm += (int(dst[1:]) << 16)
 
